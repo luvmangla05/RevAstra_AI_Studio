@@ -1,0 +1,65 @@
+/* StrategicChanakyaHero Stylesheet */
+/* Core styles are loaded from global index.css. Custom component styling can be defined here. */
+
+@keyframes wave-move-1 {
+  0% {
+    stroke-dashoffset: 0;
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    stroke-dashoffset: 50;
+    transform: translateY(-3px) scaleY(1.4);
+  }
+  100% {
+    stroke-dashoffset: 100;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes wave-move-2 {
+  0% {
+    stroke-dashoffset: 40;
+    transform: translateY(0) scaleY(0.8);
+  }
+  50% {
+    stroke-dashoffset: 90;
+    transform: translateY(4px) scaleY(1.5);
+  }
+  100% {
+    stroke-dashoffset: 140;
+    transform: translateY(0) scaleY(0.8);
+  }
+}
+
+@keyframes wave-move-3 {
+  0% {
+    stroke-dashoffset: 80;
+    transform: translateY(0) scaleY(1.1);
+  }
+  50% {
+    stroke-dashoffset: 130;
+    transform: translateY(-2px) scaleY(0.6);
+  }
+  100% {
+    stroke-dashoffset: 180;
+    transform: translateY(0) scaleY(1.1);
+  }
+}
+
+.animate-wave-line-1 {
+  stroke-dasharray: 100 100;
+  animation: wave-move-1 2s infinite linear;
+  transform-origin: center;
+}
+
+.animate-wave-line-2 {
+  stroke-dasharray: 120 120;
+  animation: wave-move-2 2.6s infinite linear;
+  transform-origin: center;
+}
+
+.animate-wave-line-3 {
+  stroke-dasharray: 80 80;
+  animation: wave-move-3 1.7s infinite linear;
+  transform-origin: center;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "RevAstra AI",
+  "description": "Premium Business Growth Systems powered by AI. Combining professional creative production, lead generation campaigns, and CRM automations.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

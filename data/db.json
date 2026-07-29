@@ -1,0 +1,256 @@
+{
+  "users": [],
+  "tasks": [
+    {
+      "id": "t_demo1",
+      "title": "Follow up with Rajesh Singhania on WhatsApp Brochure",
+      "leadName": "Rajesh Singhania",
+      "leadPhone": "+91 98765 43210",
+      "type": "whatsapp",
+      "dueDate": "2026-07-29",
+      "dueTime": "11:00",
+      "priority": "high",
+      "status": "pending",
+      "notes": "Send the 3 BHK pricing sheet and video walkthrough.",
+      "createdAt": "2026-07-29T11:40:57.742Z"
+    },
+    {
+      "id": "t_demo2",
+      "title": "Schedule Site Visit for Priya Sharma at Supreme Crest",
+      "leadName": "Priya Sharma",
+      "leadPhone": "+91 99112 23344",
+      "type": "site_visit",
+      "dueDate": "2026-07-30",
+      "dueTime": "15:00",
+      "priority": "high",
+      "status": "pending",
+      "notes": "Confirm cab pickup from Noida Sector 62.",
+      "createdAt": "2026-07-29T11:40:57.742Z"
+    }
+  ],
+  "quotations": [
+    {
+      "id": "q_demo101",
+      "quotationNumber": "REV-2026-0042",
+      "clientName": "Rajesh Singhania",
+      "companyName": "Supreme Builders Ltd",
+      "clientEmail": "singhania.r@supremebuilders.in",
+      "clientPhone": "+91 98765 43210",
+      "clientAddress": "Plot 12, Tech Zone, Greater Noida, UP",
+      "clientGstin": "09AAACS1234F1Z1",
+      "items": [
+        {
+          "id": "i1",
+          "description": "WhatsApp Business API Auto-Brochure Bot Setup",
+          "quantity": 1,
+          "unitPrice": 25000,
+          "total": 25000
+        },
+        {
+          "id": "i2",
+          "description": "Meta Lead Form Instant Sync & Auto-Qualifier",
+          "quantity": 1,
+          "unitPrice": 15000,
+          "total": 15000
+        }
+      ],
+      "subtotal": 40000,
+      "discountAmount": 5000,
+      "taxableAmount": 35000,
+      "gstRate": 18,
+      "cgstAmount": 3150,
+      "sgstAmount": 3150,
+      "igstAmount": 0,
+      "isInterstate": false,
+      "grandTotal": 41300,
+      "paymentTerms": "50% advance upon PO, 50% upon deployment.",
+      "status": "approved",
+      "validUntil": "2026-08-13",
+      "createdAt": "2026-07-29T11:40:57.742Z"
+    }
+  ],
+  "leads": [
+    {
+      "id": "l_gk29hef2t",
+      "createdAt": "2026-07-29T11:42:03.095Z",
+      "status": "new",
+      "name": "Luv Mangla ",
+      "email": "luvmangla05@gmail.com",
+      "phone": "9315179330",
+      "company": "Mangla Real Estate ",
+      "industry": "builders",
+      "source": "Strategy Call booked: 2026-07-21 at 11:30 AM"
+    },
+    {
+      "id": "l_demo1",
+      "name": "Rajesh Singhania",
+      "email": "singhania.r@supremebuilders.in",
+      "phone": "+91 98765 43210",
+      "company": "Supreme Builders",
+      "industry": "builders",
+      "status": "qualified",
+      "source": "Chanakya Chatbot",
+      "createdAt": "2026-07-29T11:40:57.742Z",
+      "score": 85
+    },
+    {
+      "id": "l_demo2",
+      "name": "Priya Sharma",
+      "email": "priya@apexestates.co",
+      "phone": "+91 99112 23344",
+      "company": "Apex Estates",
+      "industry": "real-estate",
+      "status": "new",
+      "source": "Growth System Builder",
+      "createdAt": "2026-07-29T09:40:57.742Z",
+      "score": 75
+    }
+  ],
+  "assessments": [
+    {
+      "id": "a_demo1",
+      "contactName": "Priya Sharma",
+      "email": "priya@apexestates.co",
+      "phone": "+91 99112 23344",
+      "companyName": "Apex Estates",
+      "industry": "real-estate",
+      "marketCountry": "India",
+      "locationsCount": 3,
+      "monthlyEnquiries": "100-500",
+      "leadSources": [
+        "Meta Ads",
+        "Property Portals"
+      ],
+      "servicesNeeded": [
+        "Creative Production",
+        "AI Automation",
+        "CRM Setup"
+      ],
+      "biggestProblem": "Delayed lead response and manual listing matching",
+      "trackingMethod": "Google Sheets",
+      "responseSpeed": "Within 2-4 hours",
+      "followUpConsistency": "Inconsistent, done manually",
+      "desiredOutcomes": [
+        "Instant auto-response",
+        "Viewing booking links"
+      ],
+      "existingTools": [
+        "Excel",
+        "WhatsApp Web"
+      ],
+      "teamSize": 12,
+      "urgency": "Immediate (Next 14 days)",
+      "budgetRange": "₹50,000 - ₹1,50,000",
+      "createdAt": "2026-07-29T09:40:57.742Z",
+      "scores": {
+        "creative": 40,
+        "marketing": 50,
+        "leadCapture": 30,
+        "salesProcess": 25,
+        "automation": 15,
+        "leakRisk": 85,
+        "complexity": 60
+      },
+      "recommendedPackage": "arjuna"
+    }
+  ],
+  "conversations": [
+    {
+      "id": "c_demo1",
+      "visitorName": "Rajesh Singhania",
+      "visitorEmail": "singhania.r@supremebuilders.in",
+      "visitorPhone": "+91 98765 43210",
+      "industry": "builders",
+      "messages": [
+        {
+          "id": "1",
+          "sender": "chanakya",
+          "text": "Namaste, I’m Chanakya—RevAstra’s AI RevOps consultant. What are you trying to improve: lead generation, content, follow-up, appointments, sales visibility or automation?",
+          "timestamp": "2026-07-29T11:30:57.742Z"
+        },
+        {
+          "id": "2",
+          "sender": "user",
+          "text": "We are a builder in Noida. We get many leads on Meta but our team takes hours to share the brochure and leads complain.",
+          "timestamp": "2026-07-29T11:32:37.742Z"
+        },
+        {
+          "id": "3",
+          "sender": "chanakya",
+          "text": "I understand. For Noida builders, speed is money. When brochure sharing is delayed, buyers buy elsewhere. What is your average response time, and how do you distribute brochures currently?",
+          "timestamp": "2026-07-29T11:34:17.742Z"
+        },
+        {
+          "id": "4",
+          "sender": "user",
+          "text": "It takes 2 to 3 hours because agents do it manually via WhatsApp.",
+          "timestamp": "2026-07-29T11:35:57.742Z"
+        },
+        {
+          "id": "5",
+          "sender": "chanakya",
+          "text": "A delay of 2-3 hours decreases booking conversions by up to 80%. If we implement our instant automated WhatsApp brochure delivery system, you can respond in 5 seconds. Rajesh, let's schedule a strategy call to deploy this.",
+          "timestamp": "2026-07-29T11:37:37.742Z"
+        }
+      ],
+      "lastActive": "2026-07-29T11:40:57.742Z",
+      "score": 85,
+      "isEscalated": true,
+      "notes": "High intent builder. Complains of manual brochure delays."
+    }
+  ],
+  "projects": [
+    {
+      "id": "p_demo1",
+      "clientName": "Supreme Builders",
+      "projectName": "The Sovereign Crest",
+      "industry": "builders",
+      "status": "production",
+      "creativeProgress": 60,
+      "marketingProgress": 30,
+      "automationProgress": 10,
+      "deliverables": [
+        {
+          "name": "Drone Video Shoot & Aerial Footage",
+          "type": "video",
+          "status": "ready_for_review",
+          "url": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+          "name": "3 BHK Concept Reel edits",
+          "type": "video",
+          "status": "approved"
+        },
+        {
+          "name": "Project Lead Capture Landing Page",
+          "type": "landing_page",
+          "status": "in_progress"
+        },
+        {
+          "name": "WhatsApp Brochure Bot Setup",
+          "type": "agent",
+          "status": "pending"
+        }
+      ],
+      "createdAt": "2026-07-29T11:40:57.742Z"
+    }
+  ],
+  "quotes": [
+    {
+      "id": "q_demo1",
+      "name": "Rajesh Singhania",
+      "email": "singhania.r@supremebuilders.in",
+      "phone": "+91 98765 43210",
+      "company": "Supreme Builders",
+      "selectedPackage": "arjuna",
+      "status": "pending",
+      "createdAt": "2026-07-29T11:40:57.742Z"
+    }
+  ],
+  "voiceSettings": {
+    "voiceName": "Zephyr",
+    "sessionLimitSeconds": 180,
+    "costLimitDollars": 0.2,
+    "systemInstruction": "You are Chanakya, RevAstra’s AI RevOps consultant. Speak like an experienced Indian business consultant having a relaxed one-to-one conversation. Be warm, composed, concise and practical. Use short sentences and natural pauses. Avoid sounding scripted, theatrical, overexcited or robotic. Ask one useful question at a time."
+  }
+}

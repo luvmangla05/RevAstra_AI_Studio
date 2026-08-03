@@ -1,7 +1,7 @@
 # RevAstra AI
 
 **RevAstra** is an AI-powered Revenue Operations (RevOps) platform built for small and medium businesses (SMEs), with a strong focus on the Indian SME/MSME market. It combines lead capture and CRM, sales task and follow-up tracking, customer conversation analysis, GST-compliant quotation generation, sales-process diagnostics, and an AI business assistant — **Chanakya** — into a single connected system.
-
+<br>
 The product is designed around a simple idea: most SMEs lose revenue not because of a lack of leads, but because of slow follow-ups, disorganized pipelines, and manual, inconsistent sales processes. RevAstra's tools are built to surface and fix those specific leaks.
 ---
 

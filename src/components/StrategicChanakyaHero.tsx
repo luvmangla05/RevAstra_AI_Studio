@@ -868,28 +868,6 @@ To unlock, download, and securely save your comprehensive, full-screen bespoke S
       <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/5 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-amber-500/5 rounded-full blur-[140px] pointer-events-none" />
 
-      {/* Top Header */}
-      <header className="relative z-20 w-full max-w-7xl mx-auto px-6 py-6 flex justify-between items-center border-b border-white/5">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded bg-gradient-to-tr from-amber-400 to-amber-600 flex items-center justify-center shadow">
-            <Bot className="w-5 h-5 text-slate-950" />
-          </div>
-          <div>
-            <span className="font-display font-black tracking-wider text-white text-base">REVASTRA AI</span>
-            <span className="text-[9px] font-mono block text-amber-400/90 tracking-widest uppercase font-bold">Chanakya Node</span>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 text-xs">
-          <Link 
-            to="/auth" 
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded font-bold font-mono transition text-slate-300 hover:text-white"
-          >
-            CLIENT HUB
-          </Link>
-        </div>
-      </header>
-
       <AnimatePresence mode="wait">
         {!isConsulting ? (
           <motion.div

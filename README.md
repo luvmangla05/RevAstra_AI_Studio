@@ -3,6 +3,10 @@
 **RevAstra** is an AI-powered Revenue Operations (RevOps) platform built for small and medium businesses (SMEs), with a strong focus on the Indian SME/MSME market. It combines lead capture and CRM, sales task and follow-up tracking, customer conversation analysis, GST-compliant quotation generation, sales-process diagnostics, and an AI business assistant — **Chanakya** — into a single connected system.
 
 The product is designed around a simple idea: most SMEs lose revenue not because of a lack of leads, but because of slow follow-ups, disorganized pipelines, and manual, inconsistent sales processes. RevAstra's tools are built to surface and fix those specific leaks.
+---
+
+## Deployed Link
+https://www.revastra.pro/
 
 ---
 
@@ -15,8 +19,6 @@ The codebase currently contains a mix of maturity levels:
 - ✅ **Functional** — Marketing/public site, Gemini-powered Chanakya chat (text + optional Google Search/Maps grounding), the Growth System Builder / Business Diagnostic engine (deterministic scoring + AI-generated narrative), quotation generation with GST math, and a JSON-file-backed CRM (leads, tasks, quotations).
 - 🧪 **Experimental** — Chanakya Live voice mode over WebSockets (Gemini Live API), conversation analysis tooling, and report generation.
 - 🧱 **Mock / local-only / incomplete** — Authentication (no password hashing or real session verification yet), billing/plan upgrades, team management, integrations, and some admin dashboard screens. These currently simulate behavior on the client and/or persist to a local JSON file rather than a production database.
-
-Because of this, **do not treat this codebase as production-ready**. It is best understood as a fast-moving founder-built prototype that already has real end-to-end AI functionality wired in, sitting alongside UI surfaces that are still placeholders for future backend work.
 
 ---
 

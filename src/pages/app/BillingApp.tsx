@@ -26,6 +26,15 @@ export default function BillingApp() {
     >
       <div className="space-y-8">
         
+        {/* Demo Warning Banner */}
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl text-xs flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <CreditCard className="w-4 h-4 text-amber-600 shrink-0" />
+            <span><strong>UI Prototype Notice:</strong> Subscriptions & billing tier switches are in Preview Mode. Payment gateway (Razorpay/Stripe) integration is simulated.</span>
+          </div>
+          <span className="bg-amber-200 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold font-mono">Demo Mode</span>
+        </div>
+
         {/* Current Plan Overview Card */}
         <div className="bg-gradient-to-r from-astra-navy to-slate-900 text-white rounded-2xl p-6 border border-slate-800 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
@@ -35,10 +44,11 @@ export default function BillingApp() {
                 {PLANS_CONFIG[currentPlan].name} — {PLANS_CONFIG[currentPlan].tagline}
               </h2>
             </div>
-            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold px-3 py-1 rounded-full">
-              Status: Active Subscription
+            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold px-3 py-1 rounded-full">
+              Status: Demo Account (Tier: {PLANS_CONFIG[currentPlan].name})
             </span>
           </div>
+
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1 font-mono text-xs">
             <div>

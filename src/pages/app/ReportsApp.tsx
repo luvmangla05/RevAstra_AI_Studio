@@ -1,6 +1,6 @@
 import React from 'react';
 import AppLayout from '../../components/AppLayout';
-import { BarChart3, TrendingUp, Users, Clock, ArrowUpRight, DollarSign, Download } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Clock, ArrowUpRight, DollarSign, Download, Info } from 'lucide-react';
 
 export default function ReportsApp() {
   return (
@@ -10,11 +10,23 @@ export default function ReportsApp() {
     >
       <div className="space-y-6">
         
+        {/* Demo Notice Banner */}
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl text-xs flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Info className="w-4 h-4 text-amber-600 shrink-0" />
+            <span><strong>UI Prototype / Static Demo:</strong> Analytics shown below reflect static prototype benchmarks for preview purposes.</span>
+          </div>
+          <span className="bg-amber-200 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold font-mono">Sample Data</span>
+        </div>
+
         {/* Top Export Banner */}
         <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 font-display">Revenue Operations Analytics</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Real-time performance metrics across marketing channels and sales reps.</p>
+            <h3 className="text-sm font-bold text-slate-900 font-display flex items-center space-x-2">
+              <span>Revenue Operations Analytics</span>
+              <span className="text-[9px] bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded font-mono">Demo Preview</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Sample performance metrics across marketing channels and sales reps.</p>
           </div>
           <button 
             onClick={() => alert("Downloading PDF Revenue Report...")}
@@ -24,6 +36,7 @@ export default function ReportsApp() {
             <span>Export Report (PDF)</span>
           </button>
         </div>
+
 
         {/* 4 Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

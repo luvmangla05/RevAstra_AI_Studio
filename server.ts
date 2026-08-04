@@ -228,9 +228,15 @@ function initDB() {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
   if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(DEFAULT_STATE, null, 2));
+    const EXAMPLE_FILE = path.join(DATA_DIR, "db.example.json");
+    if (fs.existsSync(EXAMPLE_FILE)) {
+      fs.copyFileSync(EXAMPLE_FILE, DB_FILE);
+    } else {
+      fs.writeFileSync(DB_FILE, JSON.stringify(DEFAULT_STATE, null, 2));
+    }
   }
 }
+
 
 function readDB(): DBState {
   initDB();
@@ -426,36 +432,77 @@ app.post("/api/crm/quotations", (req, res) => {
   res.status(201).json(newQuotation);
 });
 
+// Helper to normalize lead objects to CRMLead structure cleanly
+function normalizeLead(item: any): any {
+  if (!item) return item;
+  const legacyStatusToStage: Record<string, string> = {
+    new: 'new',
+    contacted: 'contacted',
+    qualified: 'site_visit_scheduled',
+    proposal_sent: 'quotation_sent',
+    won: 'closed_won',
+    lost: 'closed_lost'
+  };
+
+  const companyName = item.companyName || item.company || '';
+  const stage = item.stage || legacyStatusToStage[item.status] || 'new';
+
+  return {
+    id: item.id || `l_${Math.random().toString(36).substring(2, 9)}`,
+    name: item.name || '',
+    phone: item.phone || '',
+    email: item.email || '',
+    companyName: companyName,
+    city: item.city || '',
+    state: item.state,
+    industry: item.industry,
+    source: item.source || 'Direct Lead',
+    stage: stage,
+    value: typeof item.value === 'number' ? item.value : 0,
+    score: typeof item.score === 'number' ? item.score : 0,
+    notes: item.notes || '',
+    assignedTo: item.assignedTo,
+    lastContactedAt: item.lastContactedAt,
+    nextFollowUpAt: item.nextFollowUpAt,
+    createdAt: item.createdAt || new Date().toISOString()
+  };
+}
+
 // Leads Endpoints
 app.get("/api/db/leads", (req, res) => {
   const db = readDB();
-  res.json(db.leads);
+  const normalizedLeads = (db.leads || []).map(normalizeLead);
+  res.json(normalizedLeads);
 });
 
 app.post("/api/db/leads", (req, res) => {
   const db = readDB();
-  const newLead = {
-    id: "l_" + Math.random().toString(36).substr(2, 9),
+  const normalized = normalizeLead({
+    id: req.body.id || "l_" + Math.random().toString(36).substr(2, 9),
     createdAt: new Date().toISOString(),
-    status: "new",
     ...req.body
-  };
-  db.leads.unshift(newLead);
+  });
+  db.leads.unshift(normalized);
   writeDB(db);
-  res.status(201).json(newLead);
+  res.status(201).json(normalized);
 });
 
 app.put("/api/db/leads/:id", (req, res) => {
   const db = readDB();
   const index = db.leads.findIndex(l => l.id === req.params.id);
   if (index !== -1) {
-    db.leads[index] = { ...db.leads[index], ...req.body };
+    const updated = normalizeLead({
+      ...db.leads[index],
+      ...req.body
+    });
+    db.leads[index] = updated;
     writeDB(db);
-    res.json(db.leads[index]);
+    res.json(updated);
   } else {
     res.status(404).json({ error: "Lead not found" });
   }
 });
+
 
 // Assessments Endpoints
 app.get("/api/db/assessments", (req, res) => {

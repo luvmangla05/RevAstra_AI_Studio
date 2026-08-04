@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { useAuth } from '../../context/AuthContext';
 import { PLAN_LIMITS } from '../../data/plansData';
-import { UserPlus, Shield, User, Mail, Plus } from 'lucide-react';
+import { UserPlus, Shield, User, Mail, Plus, Info } from 'lucide-react';
 
 export default function TeamApp() {
   const { user } = useAuth();
@@ -34,6 +34,16 @@ export default function TeamApp() {
       subtitle="Manage team members, sales rep assignments, and role-based permissions."
     >
       <div className="space-y-6">
+        
+        {/* Demo Notice Banner */}
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl text-xs flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Info className="w-4 h-4 text-amber-600 shrink-0" />
+            <span><strong>UI Prototype / Preview:</strong> Team seats & RBAC management are operating in preview mode. Multi-user authentication is coming soon.</span>
+          </div>
+          <span className="bg-amber-200 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold font-mono">Demo Mode</span>
+        </div>
+
         
         {/* Seats Usage Bar */}
         <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex items-center justify-between">

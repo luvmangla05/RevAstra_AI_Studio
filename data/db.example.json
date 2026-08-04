@@ -1,0 +1,54 @@
+{
+  "users": [
+    {
+      "id": "demo-user-1",
+      "email": "demo@example.com",
+      "name": "Demo User",
+      "businessName": "Demo Company",
+      "isVerified": true,
+      "plan": "arjuna",
+      "onboardingCompleted": true,
+      "usage": {
+        "chanakyaQueriesUsed": 5,
+        "conversationAnalysesUsed": 2,
+        "leadsAdded": 3,
+        "quotationsCreated": 1,
+        "researchedLeadsUsed": 0
+      },
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "leads": [
+    {
+      "id": "lead-demo-1",
+      "name": "Demo Lead 1",
+      "phone": "+91 90000 00000",
+      "email": "lead1@example.com",
+      "companyName": "Demo Corp",
+      "city": "Demo City",
+      "state": "Demo State",
+      "source": "Website",
+      "stage": "new",
+      "value": 50000,
+      "score": 80,
+      "notes": "Interested in AI CRM demonstration.",
+      "assignedTo": "Demo User",
+      "lastContactedAt": "2026-01-02T10:00:00.000Z",
+      "nextFollowUpAt": "2026-01-05T10:00:00.000Z",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-demo-1",
+      "title": "Follow up with Demo Lead",
+      "description": "Send initial introductory quotation",
+      "dueDate": "2026-01-05",
+      "priority": "high",
+      "status": "pending",
+      "leadId": "lead-demo-1",
+      "assignedTo": "Demo User",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ]
+}

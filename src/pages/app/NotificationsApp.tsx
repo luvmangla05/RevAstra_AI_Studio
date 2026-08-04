@@ -1,6 +1,6 @@
 import React from 'react';
 import AppLayout from '../../components/AppLayout';
-import { Bell, Sparkles, AlertCircle, CheckCircle2, MessageSquare, ShieldAlert } from 'lucide-react';
+import { Bell, Sparkles, AlertCircle, CheckCircle2, MessageSquare, ShieldAlert, Info } from 'lucide-react';
 
 export default function NotificationsApp() {
   const notifications = [
@@ -35,7 +35,18 @@ export default function NotificationsApp() {
       title="Notifications & Activity Log" 
       subtitle="Real-time alerts on new leads, response SLAs, and system updates."
     >
-      <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm divide-y divide-slate-100">
+      <div className="space-y-4">
+        {/* Demo Notice Banner */}
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl text-xs flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Info className="w-4 h-4 text-amber-600 shrink-0" />
+            <span><strong>UI Prototype / Sample Feed:</strong> Push notifications and real-time event webhooks are simulated in preview mode.</span>
+          </div>
+          <span className="bg-amber-200 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold font-mono">Sample Activity</span>
+        </div>
+
+        <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm divide-y divide-slate-100">
+
         {notifications.map((n) => (
           <div key={n.id} className={`p-4 flex items-start space-x-3 hover:bg-slate-50 transition ${n.unread ? 'bg-amber-50/20' : ''}`}>
             <div className={`p-2 rounded-lg ${
@@ -52,7 +63,10 @@ export default function NotificationsApp() {
             </div>
           </div>
         ))}
+        </div>
       </div>
     </AppLayout>
   );
 }
+
+

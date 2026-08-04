@@ -95,6 +95,7 @@ export interface CRMLead {
   companyName: string;
   city: string;
   state?: string;
+  industry?: string;
   source: string;
   stage: CRMStage;
   value: number; // in INR
@@ -105,6 +106,7 @@ export interface CRMLead {
   nextFollowUpAt?: string;
   createdAt: string;
 }
+
 
 export interface Task {
   id: string;

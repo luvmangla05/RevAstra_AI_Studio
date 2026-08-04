@@ -8,6 +8,9 @@ export default function TasksApp() {
   const [filter, setFilter] = useState<'pending' | 'completed'>('pending');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const [newTask, setNewTask] = useState({
     title: '',
     leadName: '',
@@ -24,15 +27,20 @@ export default function TasksApp() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setTasks(data);
+      })
+      .catch(err => {
+        console.error("Failed to load tasks", err);
       });
   }, []);
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.title) return;
+    if (!newTask.title || isSaving) return;
 
-    const taskToAdd: Task = {
-      id: 't_' + Math.random().toString(36).substring(2, 9),
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    const taskPayload = {
       title: newTask.title,
       leadName: newTask.leadName,
       leadPhone: newTask.leadPhone,
@@ -40,44 +48,72 @@ export default function TasksApp() {
       dueDate: newTask.dueDate,
       dueTime: newTask.dueTime,
       priority: newTask.priority,
-      status: 'pending',
+      status: 'pending' as const,
       notes: newTask.notes,
       createdAt: new Date().toISOString()
     };
 
     try {
-      await fetch('/api/crm/tasks', {
+      const res = await fetch('/api/crm/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(taskToAdd)
+        body: JSON.stringify(taskPayload)
       });
-    } catch (e) {
-      console.warn("Failed to persist task on server", e);
-    }
 
-    setTasks([taskToAdd, ...tasks]);
-    setIsAddModalOpen(false);
-    setNewTask({
-      title: '',
-      leadName: '',
-      leadPhone: '',
-      type: 'whatsapp',
-      dueDate: new Date().toISOString().split('T')[0],
-      dueTime: '12:00',
-      priority: 'high',
-      notes: ''
-    });
-  };
-
-  const toggleTaskStatus = (id: string) => {
-    setTasks(tasks.map(t => {
-      if (t.id === id) {
-        const nextStatus = t.status === 'completed' ? 'pending' : 'completed';
-        return { ...t, status: nextStatus };
+      if (!res.ok) {
+        throw new Error(`Failed to create task (${res.statusText})`);
       }
-      return t;
-    }));
+
+      const createdTask: Task = await res.json();
+      setTasks([createdTask, ...tasks]);
+      setIsAddModalOpen(false);
+      setNewTask({
+        title: '',
+        leadName: '',
+        leadPhone: '',
+        type: 'whatsapp',
+        dueDate: new Date().toISOString().split('T')[0],
+        dueTime: '12:00',
+        priority: 'high',
+        notes: ''
+      });
+    } catch (err: any) {
+      console.error("Failed to create task", err);
+      setErrorMessage(err.message || 'Failed to save task. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const toggleTaskStatus = async (id: string) => {
+    const targetTask = tasks.find(t => t.id === id);
+    if (!targetTask) return;
+
+    const previousStatus = targetTask.status;
+    const nextStatus = previousStatus === 'completed' ? 'pending' : 'completed';
+
+    // Optimistically update UI
+    setTasks(tasks.map(t => t.id === id ? { ...t, status: nextStatus } : t));
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch(`/api/crm/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to update task (${res.statusText})`);
+      }
+    } catch (err: any) {
+      console.error("Failed to update task status", err);
+      // Revert state change
+      setTasks(tasks.map(t => t.id === id ? { ...t, status: previousStatus } : t));
+      setErrorMessage(`Failed to update task: ${err.message || 'Server error'}`);
+    }
+  };
+
 
   const filteredTasks = tasks.filter(t => filter === 'completed' ? t.status === 'completed' : t.status !== 'completed');
 
@@ -88,7 +124,23 @@ export default function TasksApp() {
     >
       <div className="space-y-6">
         
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+            <button 
+              onClick={() => setErrorMessage(null)}
+              className="text-red-500 font-bold hover:text-red-700 text-xs ml-4"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Header Controls */}
+
         <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center space-x-2">
             <button
@@ -260,18 +312,21 @@ export default function TasksApp() {
               <div className="flex justify-end space-x-2 pt-2">
                 <button
                   type="button"
+                  disabled={isSaving}
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold bg-astra-navy text-white hover:bg-slate-800 rounded-lg"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-xs font-bold bg-astra-navy text-white hover:bg-slate-800 rounded-lg disabled:opacity-50 flex items-center space-x-1"
                 >
-                  Save Task
+                  {isSaving ? <span>Saving...</span> : <span>Save Task</span>}
                 </button>
               </div>
+
             </form>
           </div>
         </div>

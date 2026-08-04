@@ -30,15 +30,18 @@ export default function FreeCRMApp() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   // New Lead Form State
   const [newLead, setNewLead] = useState({
     name: '',
     phone: '',
     email: '',
     companyName: '',
-    city: user?.onboardingData?.city || 'Noida',
+    city: user?.onboardingData?.city || '',
     source: 'Meta Lead Ads',
-    value: 1500000,
+    value: 0,
     notes: ''
   });
 
@@ -51,69 +54,111 @@ export default function FreeCRMApp() {
         if (Array.isArray(data)) {
           const mapped: CRMLead[] = data.map((item: any, idx: number) => ({
             id: item.id || `l_${idx}`,
-            name: item.name || 'Prospect',
-            phone: item.phone || '+91 98765 43210',
-            email: item.email || 'lead@example.com',
-            companyName: item.company || 'Direct Buyer',
-            city: item.city || 'Delhi NCR',
-            source: item.source || 'Meta Lead Ads',
-            stage: item.stage || (item.status === 'won' ? 'closed_won' : (item.status === 'qualified' ? 'site_visit_scheduled' : 'new')),
-            value: item.value || 2000000,
-            score: item.score || 70,
-            notes: item.notes || 'Interested in 3 BHK brochure.',
+            name: item.name || '',
+            phone: item.phone || '',
+            email: item.email || '',
+            companyName: item.companyName || item.company || '',
+            city: item.city || '',
+            state: item.state,
+            industry: item.industry,
+            source: item.source || 'Direct Lead',
+            stage: item.stage || 'new',
+            value: typeof item.value === 'number' ? item.value : 0,
+            score: typeof item.score === 'number' ? item.score : 0,
+            notes: item.notes || '',
+            assignedTo: item.assignedTo,
+            lastContactedAt: item.lastContactedAt,
+            nextFollowUpAt: item.nextFollowUpAt,
             createdAt: item.createdAt || new Date().toISOString()
           }));
           setLeads(mapped);
         }
+      })
+      .catch(err => {
+        console.error("Failed to fetch CRM leads", err);
       });
   }, []);
 
   const handleAddLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newLead.name || !newLead.phone) return;
+    if (!newLead.name || !newLead.phone || isSaving) return;
 
-    const leadToAdd: CRMLead = {
-      id: 'l_' + Math.random().toString(36).substring(2, 9),
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    const leadPayload = {
       name: newLead.name,
       phone: newLead.phone,
       email: newLead.email,
       companyName: newLead.companyName,
       city: newLead.city,
       source: newLead.source,
-      stage: 'new',
-      value: Number(newLead.value),
-      score: 80,
+      stage: 'new' as CRMStage,
+      value: Number(newLead.value) || 0,
+      score: 0,
       notes: newLead.notes,
       createdAt: new Date().toISOString()
     };
 
     try {
-      await fetch('/api/db/leads', {
+      const res = await fetch('/api/db/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leadToAdd)
+        body: JSON.stringify(leadPayload)
       });
-    } catch (err) {
-      console.warn("Failed to persist lead on backend", err);
+
+      if (!res.ok) {
+        throw new Error(`Failed to create lead (${res.statusText})`);
+      }
+
+      const createdLead: CRMLead = await res.json();
+      setLeads([createdLead, ...leads]);
+      setIsAddModalOpen(false);
+      setNewLead({
+        name: '',
+        phone: '',
+        email: '',
+        companyName: '',
+        city: user?.onboardingData?.city || '',
+        source: 'Meta Lead Ads',
+        value: 0,
+        notes: ''
+      });
+    } catch (err: any) {
+      console.error("Error creating lead:", err);
+      setErrorMessage(err.message || 'Failed to save lead. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-
-    setLeads([leadToAdd, ...leads]);
-    setIsAddModalOpen(false);
-    setNewLead({
-      name: '',
-      phone: '',
-      email: '',
-      companyName: '',
-      city: user?.onboardingData?.city || 'Noida',
-      source: 'Meta Lead Ads',
-      value: 1500000,
-      notes: ''
-    });
   };
 
-  const handleStageChange = (leadId: string, newStage: CRMStage) => {
+  const handleStageChange = async (leadId: string, newStage: CRMStage) => {
+    const targetLead = leads.find(l => l.id === leadId);
+    if (!targetLead || targetLead.stage === newStage) return;
+
+    const previousStage = targetLead.stage;
+    // Optimistically update UI
     setLeads(leads.map(l => l.id === leadId ? { ...l, stage: newStage } : l));
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch(`/api/db/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: newStage })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to update stage (${res.statusText})`);
+      }
+    } catch (err: any) {
+      console.error("Error updating stage:", err);
+      // Revert stage change
+      setLeads(leads.map(l => l.id === leadId ? { ...l, stage: previousStage } : l));
+      setErrorMessage(`Failed to update lead stage: ${err.message || 'Server error'}`);
+    }
   };
+
 
   const filteredLeads = leads.filter(l => {
     const matchesSearch = l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -144,6 +189,21 @@ export default function FreeCRMApp() {
     >
       <div className="space-y-6">
         
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+            <button 
+              onClick={() => setErrorMessage(null)}
+              className="text-red-500 font-bold hover:text-red-700 text-xs ml-4"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Usage Bar & Actions */}
         <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3 w-full sm:w-auto">
@@ -198,38 +258,38 @@ export default function FreeCRMApp() {
           {/* Stage Filter Buttons */}
           <div className="flex items-center space-x-1 overflow-x-auto w-full md:w-auto pb-1">
             {[
-              { id: 'all', label: 'All Stages' },
+              { id: 'all', label: 'All Leads' },
               { id: 'new', label: 'New' },
               { id: 'contacted', label: 'Contacted' },
-              { id: 'site_visit_scheduled', label: 'Site Visit' },
-              { id: 'quotation_sent', label: 'Quotation' },
-              { id: 'closed_won', label: 'Won' }
-            ].map((st) => (
+              { id: 'site_visit_scheduled', label: 'Site Visit Scheduled' },
+              { id: 'quotation_sent', label: 'Quotation Sent' },
+              { id: 'closed_won', label: 'Closed Won' }
+            ].map(tab => (
               <button
-                key={st.id}
-                onClick={() => setSelectedStage(st.id)}
-                className={`text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition ${
-                  selectedStage === st.id
-                    ? 'bg-astra-navy text-white font-bold'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                key={tab.id}
+                onClick={() => setSelectedStage(tab.id)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                  selectedStage === tab.id 
+                    ? 'bg-astra-navy text-white font-semibold' 
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
-                {st.label}
+                {tab.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Leads Data Table */}
+        {/* Leads Table / Cards */}
         <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-500 font-mono text-[10px] uppercase tracking-wider">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3">Lead Name & Phone</th>
-                  <th className="px-4 py-3">Company & City</th>
+                  <th className="px-4 py-3">Lead / Company</th>
+                  <th className="px-4 py-3">Contact</th>
                   <th className="px-4 py-3">Source</th>
-                  <th className="px-4 py-3">Value (INR)</th>
+                  <th className="px-4 py-3">Est. Value</th>
                   <th className="px-4 py-3">Pipeline Stage</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -237,73 +297,68 @@ export default function FreeCRMApp() {
               <tbody className="divide-y divide-slate-100">
                 {filteredLeads.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-400 text-xs">
-                      No leads match your filter query. Add your first lead or import from Excel.
+                    <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                      No leads match your current filter or search criteria.
                     </td>
                   </tr>
                 ) : (
                   filteredLeads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-slate-50/80 transition">
-                      
-                      {/* Name & Contact */}
-                      <td className="px-4 py-3.5">
-                        <div className="font-bold text-slate-900 text-xs">{lead.name}</div>
-                        <div className="text-[11px] text-slate-500 flex items-center mt-0.5 space-x-2">
-                          <span className="flex items-center"><Phone className="w-3 h-3 mr-1 text-slate-400" />{lead.phone}</span>
-                        </div>
-                      </td>
-
-                      {/* Company & City */}
-                      <td className="px-4 py-3.5">
-                        <div className="text-slate-800 font-medium">{lead.companyName || 'Direct Prospect'}</div>
+                      <td className="px-4 py-3">
+                        <div className="font-bold text-slate-900">{lead.name}</div>
                         <div className="text-[11px] text-slate-500 flex items-center mt-0.5">
-                          <MapPin className="w-3 h-3 mr-1 text-slate-400" />{lead.city || 'India'}
+                          <Building2 className="w-3 h-3 mr-1 text-slate-400" />
+                          <span>{lead.companyName || 'N/A'}</span>
+                          {lead.city && <span className="ml-1 text-slate-400">({lead.city})</span>}
                         </div>
                       </td>
-
-                      {/* Source */}
-                      <td className="px-4 py-3.5">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                      <td className="px-4 py-3 font-mono text-[11px]">
+                        <div className="flex items-center text-slate-800">
+                          <Phone className="w-3 h-3 mr-1 text-slate-400" />
+                          <span>{lead.phone}</span>
+                        </div>
+                        {lead.email && (
+                          <div className="flex items-center text-slate-500 mt-0.5">
+                            <Mail className="w-3 h-3 mr-1 text-slate-400" />
+                            <span>{lead.email}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">
                           <Tag className="w-2.5 h-2.5 mr-1 text-slate-400" />
                           {lead.source}
                         </span>
                       </td>
-
-                      {/* Value */}
-                      <td className="px-4 py-3.5 font-bold font-mono text-slate-900">
+                      <td className="px-4 py-3 font-mono font-bold text-slate-900">
                         ₹{(lead.value || 0).toLocaleString('en-IN')}
                       </td>
-
-                      {/* Pipeline Stage Select */}
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-3">
                         <select
                           value={lead.stage}
                           onChange={(e) => handleStageChange(lead.id, e.target.value as CRMStage)}
-                          className={`text-[10px] font-bold px-2 py-1 rounded border focus:outline-none ${getStageBadgeClass(lead.stage)}`}
+                          className={`text-xs font-semibold px-2 py-1 rounded-md border text-slate-800 cursor-pointer focus:outline-none ${getStageBadgeClass(lead.stage)}`}
                         >
-                          <option value="new">New Lead</option>
+                          <option value="new">New</option>
                           <option value="contacted">Contacted</option>
                           <option value="site_visit_scheduled">Site Visit Scheduled</option>
                           <option value="site_visit_done">Site Visit Done</option>
                           <option value="quotation_sent">Quotation Sent</option>
-                          <option value="negotiation">In Negotiation</option>
+                          <option value="negotiation">Negotiation</option>
                           <option value="closed_won">Closed Won</option>
                           <option value="closed_lost">Closed Lost</option>
                         </select>
                       </td>
-
-                      {/* Actions */}
-                      <td className="px-4 py-3.5 text-right space-x-2">
+                      <td className="px-4 py-3 text-right space-x-1">
                         <a
                           href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`}
                           target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-[11px] font-semibold transition"
                         >
                           WhatsApp
                         </a>
                       </td>
-
                     </tr>
                   ))
                 )}
@@ -311,7 +366,6 @@ export default function FreeCRMApp() {
             </table>
           </div>
         </div>
-
       </div>
 
       {/* Add Lead Modal */}
@@ -384,16 +438,18 @@ export default function FreeCRMApp() {
               <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
+                  disabled={isSaving}
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold bg-astra-navy text-white hover:bg-slate-800 rounded-lg"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-xs font-bold bg-astra-navy text-white hover:bg-slate-800 rounded-lg disabled:opacity-50 flex items-center space-x-1"
                 >
-                  Save Lead
+                  {isSaving ? <span>Saving...</span> : <span>Save Lead</span>}
                 </button>
               </div>
             </form>

@@ -1132,7 +1132,7 @@ To unlock, download, and securely save your comprehensive, full-screen bespoke S
                       </div>
                       <div>
                         <h4 className="font-display font-bold text-base text-white">Luv Mangla</h4>
-                        <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">CTO - Chief Technology Officer</p>
+                        <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Co-Founder & Chief Technology Officer</p>
                       </div>
                     </div>
                   </div>

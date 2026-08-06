@@ -166,7 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ onboardingData: updatedData })
+        body: JSON.stringify({ email: user.email, onboardingData: updatedData })
       });
     } catch (e) {
       console.warn("Backend profile sync optional failure", e);
@@ -190,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ plan: newPlan })
+        body: JSON.stringify({ email: user.email, plan: newPlan })
       });
     } catch (e) {
       console.warn("Backend billing sync optional failure", e);

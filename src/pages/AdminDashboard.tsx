@@ -5,11 +5,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  Users, Bot, ShieldCheck, Database, Calendar, TrendingUp, CheckCircle2, 
-  Trash2, ShieldAlert, Cpu, RefreshCw, LogOut, PhoneCall 
+import {
+  Users, Bot, ShieldCheck, Database, Calendar, TrendingUp, CheckCircle2,
+  Trash2, ShieldAlert, Cpu, RefreshCw, LogOut, PhoneCall
 } from 'lucide-react';
-import { Lead, Assessment, Consultation, Quote } from '../types';
+import { Lead, CRMStage, Assessment, Consultation, Quote } from '../types';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ export default function AdminDashboard() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [voiceSettings, setVoiceSettings] = useState({
     voiceName: 'Zephyr',
     sessionLimitSeconds: 180,
@@ -51,7 +51,7 @@ export default function AdminDashboard() {
       setAssessments(assData || []);
       setConsultations(consData || []);
       setQuotes(quotesData || []);
-      
+
       if (voiceData) {
         setVoiceSettings(voiceData);
       }
@@ -71,12 +71,12 @@ export default function AdminDashboard() {
     fetchAllData();
   }, []);
 
-  const handleUpdateLeadStatus = async (id: string, newStatus: string) => {
+  const handleUpdateLeadStage = async (id: string, newStage: CRMStage) => {
     try {
       await fetch(`/api/db/leads/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ stage: newStage })
       });
       fetchAllData();
     } catch (err) {
@@ -118,13 +118,15 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    navigate('/auth');
+    localStorage.removeItem('revastra_user_session');
+    localStorage.removeItem('revastra_user_token');
+    localStorage.removeItem('userRole');
+    navigate('/login');
   };
 
   return (
     <div className="bg-slate-50 min-h-screen">
-      
+
       {/* Top Admin Navigation Header */}
       <div className="bg-astra-navy text-white p-4 sticky top-0 z-30 shadow-md border-b border-white/10">
         <div className="max-w-7xl mx-auto flex justify-between items-center text-xs">
@@ -135,14 +137,14 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <button 
+            <button
               onClick={fetchAllData}
               className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white transition flex items-center space-x-1"
               title="Refresh Data"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
-            <button 
+            <button
               onClick={handleLogout}
               className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition font-semibold flex items-center space-x-1"
             >
@@ -154,7 +156,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
+
         {/* Navigation Sidebar */}
         <div className="space-y-2 lg:col-span-1">
           {[
@@ -167,17 +169,15 @@ export default function AdminDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full text-left p-3.5 rounded-xl text-xs font-semibold border transition flex justify-between items-center ${
-                activeTab === tab.id 
-                  ? 'bg-astra-navy text-white border-astra-navy shadow-md' 
+              className={`w-full text-left p-3.5 rounded-xl text-xs font-semibold border transition flex justify-between items-center ${activeTab === tab.id
+                  ? 'bg-astra-navy text-white border-astra-navy shadow-md'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+                }`}
             >
               <span>{tab.label}</span>
               {tab.count !== null && (
-                <span className={`px-2 py-0.2 text-[9px] rounded-full font-mono font-bold ${
-                  activeTab === tab.id ? 'bg-astra-gold text-astra-navy' : 'bg-slate-100 text-slate-500'
-                }`}>
+                <span className={`px-2 py-0.2 text-[9px] rounded-full font-mono font-bold ${activeTab === tab.id ? 'bg-astra-gold text-astra-navy' : 'bg-slate-100 text-slate-500'
+                  }`}>
                   {tab.count}
                 </span>
               )}
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
 
         {/* Dynamic Admin Panels */}
         <div className="lg:col-span-3 space-y-6">
-          
+
           {loading ? (
             <div className="text-center py-20 bg-white border border-slate-100 rounded-xl">
               <div className="w-8 h-8 border-4 border-astra-gold border-t-astra-navy rounded-full animate-spin mx-auto" />
@@ -229,8 +229,8 @@ export default function AdminDashboard() {
                                 <p className="text-[10px] text-slate-400">{l.phone} | {l.email}</p>
                               </td>
                               <td className="py-3.5">
-                                <p className="font-medium">{l.company}</p>
-                                <p className="text-[10px] font-mono uppercase text-slate-400">{l.industry}</p>
+                                <p className="font-medium">{l.companyName || l.company || 'N/A'}</p>
+                                <p className="text-[10px] font-mono uppercase text-slate-400">{l.industry || 'General'}</p>
                               </td>
                               <td className="py-3.5">
                                 <span className="bg-slate-100 px-2 py-0.5 rounded text-[9px] font-medium font-mono">
@@ -239,14 +239,18 @@ export default function AdminDashboard() {
                               </td>
                               <td className="py-3.5">
                                 <select
-                                  value={l.status}
-                                  onChange={(e) => handleUpdateLeadStatus(l.id, e.target.value)}
-                                  className="bg-slate-50 border border-slate-200 rounded p-1 text-[11px] font-semibold text-slate-700"
+                                  value={l.stage || l.status || 'new'}
+                                  onChange={(e) => handleUpdateLeadStage(l.id, e.target.value as CRMStage)}
+                                  className="bg-slate-50 border border-slate-200 rounded p-1 text-[11px] font-semibold text-slate-700 cursor-pointer"
                                 >
-                                  <option value="new">New Enquiry</option>
-                                  <option value="contacted">Contacted / WhatsApp Delivered</option>
-                                  <option value="qualified">Qualified Lead</option>
-                                  <option value="won">System Won / Signed</option>
+                                  <option value="new">New Lead</option>
+                                  <option value="contacted">Contacted</option>
+                                  <option value="site_visit_scheduled">Site Visit Scheduled</option>
+                                  <option value="site_visit_done">Site Visit Done</option>
+                                  <option value="quotation_sent">Quotation Sent</option>
+                                  <option value="negotiation">Negotiation</option>
+                                  <option value="closed_won">Closed Won</option>
+                                  <option value="closed_lost">Closed Lost</option>
                                 </select>
                               </td>
                               <td className="py-3.5 text-right">
@@ -317,8 +321,8 @@ export default function AdminDashboard() {
                           </div>
 
                           <div className="flex justify-end pt-1">
-                            <Link 
-                              to={`/recommendation/${ass.id}`} 
+                            <Link
+                              to={`/recommendation/${ass.id}`}
                               target="_blank"
                               className="text-[11px] font-bold text-astra-gold hover:underline flex items-center"
                             >

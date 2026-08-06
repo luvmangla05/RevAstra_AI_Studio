@@ -1,3 +1,4 @@
+// server.ts 
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -108,9 +109,9 @@ const DEFAULT_STATE: DBState = {
       name: "Rajesh Singhania",
       email: "singhania.r@supremebuilders.in",
       phone: "+91 98765 43210",
-      company: "Supreme Builders",
+      companyName: "Supreme Builders",
       industry: "builders",
-      status: "qualified",
+      stage: "site_visit_scheduled",
       source: "Chanakya Chatbot",
       createdAt: new Date().toISOString(),
       score: 85
@@ -120,9 +121,9 @@ const DEFAULT_STATE: DBState = {
       name: "Priya Sharma",
       email: "priya@apexestates.co",
       phone: "+91 99112 23344",
-      company: "Apex Estates",
+      companyName: "Apex Estates",
       industry: "real-estate",
-      status: "new",
+      stage: "new",
       source: "Growth System Builder",
       createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
       score: 75
@@ -368,13 +369,31 @@ app.post("/api/auth/login", (req, res) => {
 
 app.post("/api/user/profile", (req, res) => {
   const db = readDB();
-  const { onboardingData } = req.body;
-  // If user present update onboarding
+  const { onboardingData, email } = req.body;
+  db.users = db.users || [];
+  if (email && db.users.length > 0) {
+    const user = db.users.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+    if (user) {
+      user.onboardingCompleted = true;
+      user.onboardingData = onboardingData;
+      user.businessName = onboardingData.businessName || user.businessName;
+    }
+  }
+  writeDB(db);
   res.json({ success: true, onboardingData });
 });
 
 app.post("/api/user/billing", (req, res) => {
-  const { plan } = req.body;
+  const db = readDB();
+  const { plan, email } = req.body;
+  db.users = db.users || [];
+  if (email && db.users.length > 0) {
+    const user = db.users.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+    if (user) {
+      user.plan = plan;
+    }
+  }
+  writeDB(db);
   res.json({ success: true, plan });
 });
 
@@ -411,6 +430,19 @@ app.put("/api/crm/tasks/:id", (req, res) => {
   }
 });
 
+app.delete("/api/crm/tasks/:id", (req, res) => {
+  const db = readDB();
+  db.tasks = db.tasks || [];
+  const index = db.tasks.findIndex((t: any) => t.id === req.params.id);
+  if (index !== -1) {
+    const deleted = db.tasks.splice(index, 1)[0];
+    writeDB(db);
+    res.json({ success: true, deleted });
+  } else {
+    res.status(404).json({ error: "Task not found" });
+  }
+});
+
 // Quotations Endpoints
 app.get("/api/crm/quotations", (req, res) => {
   const db = readDB();
@@ -430,6 +462,32 @@ app.post("/api/crm/quotations", (req, res) => {
   db.quotations.unshift(newQuotation);
   writeDB(db);
   res.status(201).json(newQuotation);
+});
+
+app.put("/api/crm/quotations/:id", (req, res) => {
+  const db = readDB();
+  db.quotations = db.quotations || [];
+  const index = db.quotations.findIndex((q: any) => q.id === req.params.id);
+  if (index !== -1) {
+    db.quotations[index] = { ...db.quotations[index], ...req.body };
+    writeDB(db);
+    res.json(db.quotations[index]);
+  } else {
+    res.status(404).json({ error: "Quotation not found" });
+  }
+});
+
+app.delete("/api/crm/quotations/:id", (req, res) => {
+  const db = readDB();
+  db.quotations = db.quotations || [];
+  const index = db.quotations.findIndex((q: any) => q.id === req.params.id);
+  if (index !== -1) {
+    const deleted = db.quotations.splice(index, 1)[0];
+    writeDB(db);
+    res.json({ success: true, deleted });
+  } else {
+    res.status(404).json({ error: "Quotation not found" });
+  }
 });
 
 // Helper to normalize lead objects to CRMLead structure cleanly
@@ -453,11 +511,13 @@ function normalizeLead(item: any): any {
     phone: item.phone || '',
     email: item.email || '',
     companyName: companyName,
+    company: companyName, // Backward-compatibility alias
     city: item.city || '',
     state: item.state,
     industry: item.industry,
     source: item.source || 'Direct Lead',
     stage: stage,
+    status: stage, // Backward-compatibility alias
     value: typeof item.value === 'number' ? item.value : 0,
     score: typeof item.score === 'number' ? item.score : 0,
     notes: item.notes || '',
@@ -498,6 +558,19 @@ app.put("/api/db/leads/:id", (req, res) => {
     db.leads[index] = updated;
     writeDB(db);
     res.json(updated);
+  } else {
+    res.status(404).json({ error: "Lead not found" });
+  }
+});
+
+app.delete("/api/db/leads/:id", (req, res) => {
+  const db = readDB();
+  db.leads = db.leads || [];
+  const index = db.leads.findIndex(l => l.id === req.params.id);
+  if (index !== -1) {
+    const deleted = db.leads.splice(index, 1)[0];
+    writeDB(db);
+    res.json({ success: true, deleted });
   } else {
     res.status(404).json({ error: "Lead not found" });
   }
@@ -668,18 +741,18 @@ With a computed Follow-Up Maturity of "${maturityLevels.followUpMaturity}" and L
   db.assessments.unshift(newAssessment);
   
   // Also create a living lead automatically from this assessment submission!
-  const newLead = {
+  const newLead = normalizeLead({
     id: "l_" + Math.random().toString(36).substr(2, 9),
     name: assessmentData.contactName,
     email: assessmentData.email,
     phone: assessmentData.phone,
-    company: assessmentData.companyName,
+    companyName: assessmentData.companyName,
     industry: assessmentData.industry || 'other',
-    status: "new",
+    stage: "new",
     source: "Growth System Builder",
     createdAt: new Date().toISOString(),
     score: Math.round((100 - scores.leakRisk + scores.creative) / 2)
-  };
+  });
   db.leads.unshift(newLead);
 
   writeDB(db);
@@ -763,18 +836,18 @@ app.post("/api/db/quotes", (req, res) => {
   db.quotes.unshift(newQuote);
 
   // Auto-generate a lead from this quote request
-  const newLead = {
+  const newLead = normalizeLead({
     id: "l_" + Math.random().toString(36).substr(2, 9),
     name: req.body.name,
     email: req.body.email,
     phone: req.body.phone,
-    company: req.body.company || "Direct Lead",
+    companyName: req.body.company || req.body.companyName || "Direct Lead",
     industry: "other",
-    status: "new",
+    stage: "new",
     source: `Quote Request: ${req.body.selectedPackage}`,
     createdAt: new Date().toISOString(),
     score: 80
-  };
+  });
   db.leads.unshift(newLead);
 
   writeDB(db);
@@ -1116,18 +1189,18 @@ app.post("/api/chanakya/audit", async (req, res) => {
   // Create a real Lead in the database for tracking!
   const db = readDB();
   const newLeadId = `l_audit_${Date.now().toString().slice(-6)}`;
-  const newLead = {
+  const newLead = normalizeLead({
     id: newLeadId,
     name: companyName,
     email: contactEmail || "audit-request@revastra.pro",
     phone: contactPhone || "+91 99999 99999",
-    company: companyName,
+    companyName: companyName,
     industry: "business-leak-audit",
-    status: "new",
+    stage: "new",
     source: `Chanakya Leak Audit: ${companyWebsite}`,
     createdAt: new Date().toISOString(),
     score: 100 - leakScore // High leak = lower initial health score
-  };
+  });
   
   db.leads.unshift(newLead);
   
@@ -1367,18 +1440,18 @@ app.post("/api/chanakya/report", async (req, res) => {
   db.reports.unshift(newReport);
 
   // Also save a corresponding lead record so they appear in dashboard
-  const newLead = {
+  const newLead = normalizeLead({
     id: "l_rep_" + Math.random().toString(36).substr(2, 9),
     name: contactName || "Chanakya Consultation Guest",
     email: email || "consultation@revastra.pro",
     phone: phone || "None provided",
-    company: companyName || "Consultation Client",
+    companyName: companyName || "Consultation Client",
     industry: industry || "other",
-    status: "qualified",
+    stage: "site_visit_scheduled",
     source: `Chanakya AI Consultation Report`,
     createdAt: new Date().toISOString(),
     score: Math.round((leadCapture + followUpMaturity + crmHygiene) / 3)
-  };
+  });
   db.leads.unshift(newLead);
 
   // Also save conversation to conversations

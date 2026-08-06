@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { Task } from '../../types';
-import { CheckSquare, Plus, Phone, Calendar, Clock, Check, AlertTriangle, MessageSquare } from 'lucide-react';
+import { CheckSquare, Plus, Phone, Calendar, Clock, Check, AlertTriangle, MessageSquare, Trash2 } from 'lucide-react';
 
 export default function TasksApp() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -32,6 +32,17 @@ export default function TasksApp() {
         console.error("Failed to load tasks", err);
       });
   }, []);
+
+  const handleDeleteTask = async (id: string) => {
+    try {
+      const res = await fetch(`/api/crm/tasks/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setTasks(tasks.filter(t => t.id !== id));
+      }
+    } catch (err) {
+      console.error("Failed to delete task", err);
+    }
+  };
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,6 +234,11 @@ export default function TasksApp() {
                         <Calendar className="w-3 h-3 text-slate-400" />
                         <span>{task.dueDate} @ {task.dueTime}</span>
                       </div>
+                      {task.status !== 'completed' && task.dueDate && task.dueDate < new Date().toISOString().split('T')[0] && (
+                        <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                          OVERDUE
+                        </span>
+                      )}
                     </div>
 
                     {task.leadPhone && (
@@ -235,6 +251,14 @@ export default function TasksApp() {
                         WhatsApp
                       </a>
                     )}
+
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="text-slate-400 hover:text-red-600 p-1 rounded transition"
+                      title="Delete task"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
                 </div>

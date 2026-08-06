@@ -19,7 +19,8 @@ import {
   Sparkles, 
   Download, 
   Upload,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 
 export default function FreeCRMApp() {
@@ -156,6 +157,18 @@ export default function FreeCRMApp() {
       // Revert stage change
       setLeads(leads.map(l => l.id === leadId ? { ...l, stage: previousStage } : l));
       setErrorMessage(`Failed to update lead stage: ${err.message || 'Server error'}`);
+    }
+  };
+
+  const handleDeleteLead = async (leadId: string) => {
+    if (!window.confirm("Are you sure you want to remove this lead?")) return;
+    try {
+      const res = await fetch(`/api/db/leads/${leadId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setLeads(leads.filter(l => l.id !== leadId));
+      }
+    } catch (err) {
+      console.error("Error deleting lead:", err);
     }
   };
 
@@ -349,7 +362,7 @@ export default function FreeCRMApp() {
                           <option value="closed_lost">Closed Lost</option>
                         </select>
                       </td>
-                      <td className="px-4 py-3 text-right space-x-1">
+                      <td className="px-4 py-3 text-right space-x-2">
                         <a
                           href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`}
                           target="_blank"
@@ -358,6 +371,13 @@ export default function FreeCRMApp() {
                         >
                           WhatsApp
                         </a>
+                        <button
+                          onClick={() => handleDeleteLead(lead.id)}
+                          className="inline-flex items-center p-1 text-slate-400 hover:text-red-600 rounded transition"
+                          title="Delete Lead"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   ))

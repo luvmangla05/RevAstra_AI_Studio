@@ -38,15 +38,15 @@ export default function AppDashboard() {
           const mapped = data.map((item: any, idx: number) => ({
             id: item.id || `l_${idx}`,
             name: item.name || 'Prospect',
-            phone: item.phone || '+91 98765 43210',
-            email: item.email || 'prospect@gmail.com',
-            companyName: item.company || 'Direct Buyer',
-            city: item.city || 'Noida',
+            phone: item.phone || '',
+            email: item.email || '',
+            companyName: item.companyName || item.company || 'Direct Buyer',
+            city: item.city || '',
             source: item.source || 'Meta Lead Ads',
-            stage: (item.status === 'won' ? 'closed_won' : (item.status === 'qualified' ? 'site_visit_scheduled' : 'new')) as CRMStage,
-            value: item.value || 2500000,
-            score: item.score || 75,
-            notes: 'Requires instant brochure follow-up.',
+            stage: (item.stage || (item.status === 'won' ? 'closed_won' : (item.status === 'qualified' ? 'site_visit_scheduled' : 'new'))) as CRMStage,
+            value: typeof item.value === 'number' ? item.value : 0,
+            score: typeof item.score === 'number' ? item.score : 0,
+            notes: item.notes || '',
             createdAt: item.createdAt || new Date().toISOString()
           }));
           setLeads(mapped);
@@ -74,7 +74,13 @@ export default function AppDashboard() {
   // Compute metrics
   const totalLeads = leads.length;
   const totalPipelineValue = leads.reduce((sum, l) => sum + (l.value || 0), 0);
-  const overdueTasks = tasks.filter(t => t.status === 'pending' || t.status === 'overdue');
+  
+  const todayISO = new Date().toISOString().split('T')[0];
+  const overdueTasks = tasks.filter(t => {
+    if (t.status === 'completed') return false;
+    if (t.status === 'overdue') return true;
+    return Boolean(t.dueDate && t.dueDate <= todayISO);
+  });
   const pendingQuotations = quotations.filter(q => q.status === 'pending_owner_approval' || q.status === 'draft');
 
   const handleChanakyaSearch = (e: React.FormEvent) => {

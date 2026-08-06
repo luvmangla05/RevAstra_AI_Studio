@@ -101,7 +101,7 @@ function AppRoutes() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/book-strategy-call" element={<BookStrategyCall />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/legal" element={<Legal />} />
       </Routes>
 

@@ -186,12 +186,17 @@ export interface Lead {
   name: string;
   email: string;
   phone: string;
-  company: string;
-  industry: 'builders' | 'real-estate' | 'hotels' | 'clinics' | 'gyms' | 'automotive' | 'other';
-  status: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'won' | 'lost';
+  companyName: string;
+  company?: string;
+  industry?: string;
+  stage: CRMStage;
+  status?: string;
   source: string;
   createdAt: string;
   score: number;
+  value?: number;
+  city?: string;
+  notes?: string;
 }
 
 export interface Assessment {

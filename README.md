@@ -2,15 +2,27 @@
 
 **AI-Powered Revenue Operations, CRM and Business Automation Platform for Indian SMEs**
 
-RevAstra AI Studio is an AI-powered Revenue Operations platform designed for small and medium businesses, particularly businesses operating in India.
+Production domain: `https://www.revastra.pro`
 
-The platform combines lead management, follow-up tracking, business diagnostics, quotation generation, customer-conversation analysis and AI-powered sales assistance into one connected system.
+---
 
-RevAstra is built around a simple business reality:
+## RevAstra v0.3 — Production Foundation & CRM Completeness
 
-> Most businesses do not lose revenue because they lack leads. They lose revenue because leads are not recorded properly, follow-ups are delayed and sales processes are inconsistent.
-
-RevAstra helps identify and reduce these revenue leaks.
+### Key Technical Improvements in v0.3:
+* **Environment-Aware Server Config**: Replaced hardcoded port `3000` with `Number(process.env.PORT || 3000)` listening on `0.0.0.0`. Centralized all Gemini model names (`GEMINI_TEXT_MODEL`, `GEMINI_LIVE_MODEL`, `GEMINI_THINKING_MODEL`, `GEMINI_ASSESSMENT_MODEL`) in `server/config/index.ts`.
+* **Explicit Production Execution**: Updated `package.json` with `cross-env NODE_ENV=production node dist/server.cjs` for reliable cross-platform production startup (`npm run build && npm start`).
+* **Health Monitoring Endpoint**: Created `GET /api/health` providing operational diagnostic information (environment, database health, active Gemini models) without exposing secret keys.
+* **Hardened Chanakya Live WebSocket**: Added structured operational logs (`[WS]`, `[Gemini Live]`) for connection lifecycle and errors. Ensured Gemini connection failures return a graceful text fallback without crashing the Node server process.
+* **Cleaned Database Handling**: Excluded `data/db.json` from Git tracking while preserving `data/db.example.json`. Documented JSON storage as temporary infrastructure.
+* **Refactored Server Architecture**: Modularized `server.ts` into clean domain routes (`health`, `leads`, `tasks`, `quotations`, `activities`) with Zod schema payload validation.
+* **CRM Completeness & Relationships**:
+  - Full lead editing drawer UI & backend handling.
+  - Lead Activity Timeline tracking (`lead_created`, `note_added`, `stage_changed`, `task_created`, `task_completed`, `quotation_created`, `quotation_sent`).
+  - Added optional `leadId` linking tasks and quotations to CRM leads.
+* **Exact Overdue Calculation**: Replaced date-only logic with exact `dueDate` + `dueTime` evaluation using local user time. Completed tasks never show as overdue.
+* **Real CSV Import & Export**: Implemented server-side UTF-8 CSV parsing with column mapping validation (`Name`, `Phone`, `Email`, `Company`, `City`, `Industry`, `Source`, `Stage`, `Value`, `Notes`) and CSV export downloading (`/api/db/leads/export-csv`).
+* **Duplicate Lead Detection**: Implemented normalized phone/email comparison. Returns a `409 DUPLICATE_DETECTED` warning with match details to prevent accidental data corruption.
+* **Automated Unit Testing**: Added `vitest` test suite covering overdue task logic, duplicate detection, and lead normalization.
 
 ---
 

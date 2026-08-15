@@ -237,12 +237,21 @@ export default function FreeCRMApp() {
           </div>
 
           <div className="flex items-center space-x-2 w-full sm:w-auto">
+            <a
+              href="/api/db/leads/export-csv"
+              download
+              className="flex-1 sm:flex-initial px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1"
+            >
+              <Download className="w-3.5 h-3.5 mr-1" />
+              <span>Export CSV</span>
+            </a>
+
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="flex-1 sm:flex-initial px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1"
             >
               <Upload className="w-3.5 h-3.5 mr-1" />
-              <span>Import Excel</span>
+              <span>Import CSV</span>
             </button>
 
             <button
@@ -477,19 +486,49 @@ export default function FreeCRMApp() {
         </div>
       )}
 
-      {/* Excel Import Modal */}
+      {/* CSV Import Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 font-display">Bulk Import Excel / CSV Leads</h3>
+            <h3 className="text-base font-bold text-slate-900 font-display">Bulk Import CSV Leads</h3>
             <p className="text-xs text-slate-600">
-              Upload your existing leads file from Excel or Google Sheets. The system will map headers automatically.
+              Upload your existing leads CSV file from Excel or Google Sheets. Columns supported: Name, Phone, Email, Company, City, Industry, Source, Stage, Value, Notes.
             </p>
 
-            <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50 hover:bg-slate-100 transition cursor-pointer">
+            <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center bg-slate-50 hover:bg-slate-100 transition cursor-pointer relative">
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const text = await file.text();
+                    const res = await fetch('/api/db/leads/import-csv', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'text/plain' },
+                      body: text
+                    });
+                    const result = await res.json();
+                    if (!res.ok) {
+                      alert(`Import failed: ${result.error || 'Unknown error'}`);
+                    } else {
+                      alert(`CSV Import Complete!\nImported: ${result.imported} leads\nSkipped (duplicates/invalid): ${result.skipped} rows`);
+                      // Refresh leads list
+                      const leadsRes = await fetch('/api/db/leads');
+                      const data = await leadsRes.json();
+                      if (Array.isArray(data)) setLeads(data);
+                      setIsImportModalOpen(false);
+                    }
+                  } catch (err: any) {
+                    alert(`Error reading file: ${err.message}`);
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
               <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-xs font-bold text-slate-700">Click to upload .xlsx or .csv file</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Supports up to {crmLimit} rows</p>
+              <p className="text-xs font-bold text-slate-700">Click or drag a .csv file here</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Supports UTF-8 CSV up to {crmLimit} rows</p>
             </div>
 
             <div className="flex justify-end space-x-2 pt-2">
@@ -498,15 +537,6 @@ export default function FreeCRMApp() {
                 className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
               >
                 Close
-              </button>
-              <button
-                onClick={() => {
-                  alert("Sample demo leads imported successfully!");
-                  setIsImportModalOpen(false);
-                }}
-                className="px-4 py-2 text-xs font-bold bg-astra-gold text-astra-navy hover:bg-amber-400 rounded-lg"
-              >
-                Process File
               </button>
             </div>
           </div>

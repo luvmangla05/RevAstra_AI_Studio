@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { Task } from '../../types';
+import { isTaskOverdue, formatDueDateTime, sortTasks } from '../../utils/taskUtils';
 import { CheckSquare, Plus, Phone, Calendar, Clock, Check, AlertTriangle, MessageSquare, Trash2 } from 'lucide-react';
 
 export default function TasksApp() {
@@ -232,9 +233,9 @@ export default function TasksApp() {
                     <div className="text-[11px] text-slate-500 font-mono text-right">
                       <div className="flex items-center space-x-1 justify-end">
                         <Calendar className="w-3 h-3 text-slate-400" />
-                        <span>{task.dueDate} @ {task.dueTime}</span>
+                        <span>{formatDueDateTime(task.dueDate, task.dueTime)}</span>
                       </div>
-                      {task.status !== 'completed' && task.dueDate && task.dueDate < new Date().toISOString().split('T')[0] && (
+                      {isTaskOverdue(task) && (
                         <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded mt-0.5 inline-block">
                           OVERDUE
                         </span>

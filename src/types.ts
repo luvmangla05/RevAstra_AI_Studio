@@ -113,9 +113,11 @@ export interface Task {
   title: string;
   leadName?: string;
   leadPhone?: string;
+  /** Optional CRM lead relationship (Phase v0.4: FK to leads table) */
+  leadId?: string;
   type: 'call' | 'whatsapp' | 'site_visit' | 'quotation' | 'meeting' | 'other';
   dueDate: string; // ISO date string YYYY-MM-DD
-  dueTime?: string;
+  dueTime?: string; // HH:MM — required for accurate overdue calculation
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'completed' | 'overdue';
   notes?: string;
@@ -140,6 +142,8 @@ export interface Quotation {
   clientPhone: string;
   clientAddress?: string;
   clientGstin?: string;
+  /** Optional CRM lead relationship (Phase v0.4: FK to leads table) */
+  leadId?: string;
   items: QuotationItem[];
   subtotal: number;
   discountAmount: number;
@@ -244,6 +248,45 @@ export interface Assessment {
   recommendedPackage: string;
   analysisText?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Lead Activity Timeline
+// ---------------------------------------------------------------------------
+
+/**
+ * Activity event types for the lead timeline.
+ * Designed for future migration to PostgreSQL activity_events table.
+ */
+export type ActivityType =
+  | 'lead_created'
+  | 'note_added'
+  | 'stage_changed'
+  | 'task_created'
+  | 'task_completed'
+  | 'quotation_created'
+  | 'quotation_sent'
+  | 'contact_attempted';
+
+/**
+ * A single activity event in a lead's timeline.
+ *
+ * Future multi-tenancy fields (Phase v0.4 — Supabase + PostgreSQL):
+ *   businessId?: string;  — RLS partition key
+ *   userId?: string;      — who performed the action
+ *   role?: 'owner' | 'admin' | 'member' | 'viewer';
+ */
+export interface LeadActivity {
+  id: string;
+  leadId: string;
+  type: ActivityType;
+  description: string;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// Chanakya Chat
+// ---------------------------------------------------------------------------
 
 export interface ChanakyaMessage {
   id: string;

@@ -1,298 +1,91 @@
-// server.ts 
+// server.ts
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * RevAstra Main Server Entry Point
+ * ---------------------------------
+ * This file bootstraps Express, mounts route modules, sets up the WebSocket
+ * server for Chanakya Live, and handles static asset serving.
+ *
+ * Architecture:
+ *   server/config/index.ts       — All environment configuration (single source of truth)
+ *   server/repositories/db.ts   — JSON database read/write (temporary, see MIGRATION.md)
+ *   server/routes/              — Route modules (leads, tasks, quotations, health, activities)
+ *
+ * @license Apache-2.0
  */
 
 import express from "express";
 import path from "path";
-import fs from "fs";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
-import dotenv from "dotenv";
 import { z } from "zod";
 import http from "http";
 import { WebSocketServer } from "ws";
 
-dotenv.config();
+// Config must be imported before anything else — it calls dotenv.config()
+import { config } from "./server/config/index.js";
+
+// Route modules
+import healthRouter from "./server/routes/health.js";
+import leadsRouter from "./server/routes/leads.js";
+import tasksRouter from "./server/routes/tasks.js";
+import quotationsRouter from "./server/routes/quotations.js";
+import activitiesRouter from "./server/routes/activities.js";
+
+// DB helpers (still used by inline routes not yet extracted)
+import { readDB, writeDB, normalizeLead, initDB } from "./server/repositories/db.js";
 
 const __filename = typeof import.meta?.url === "string" ? fileURLToPath(import.meta.url) : "";
 const __dirname = __filename ? path.dirname(__filename) : "";
 
 const app = express();
-const PORT = 3000;
+const PORT = config.port;
 
-// Set up server-side storage
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_FILE = path.join(DATA_DIR, "db.json");
-
-interface DBState {
-  users?: any[];
-  leads: any[];
-  tasks?: any[];
-  quotations?: any[];
-  assessments: any[];
-  conversations: any[];
-  projects: any[];
-  quotes: any[];
-  voiceSettings?: {
-    voiceName: string;
-    sessionLimitSeconds: number;
-    costLimitDollars: number;
-    systemInstruction: string;
-  };
-}
-
-const DEFAULT_STATE: DBState = {
-  users: [],
-  tasks: [
-    {
-      id: "t_demo1",
-      title: "Follow up with Rajesh Singhania on WhatsApp Brochure",
-      leadName: "Rajesh Singhania",
-      leadPhone: "+91 98765 43210",
-      type: "whatsapp",
-      dueDate: new Date().toISOString().split('T')[0],
-      dueTime: "11:00",
-      priority: "high",
-      status: "pending",
-      notes: "Send the 3 BHK pricing sheet and video walkthrough.",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: "t_demo2",
-      title: "Schedule Site Visit for Priya Sharma at Supreme Crest",
-      leadName: "Priya Sharma",
-      leadPhone: "+91 99112 23344",
-      type: "site_visit",
-      dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      dueTime: "15:00",
-      priority: "high",
-      status: "pending",
-      notes: "Confirm cab pickup from Noida Sector 62.",
-      createdAt: new Date().toISOString()
-    }
-  ],
-  quotations: [
-    {
-      id: "q_demo101",
-      quotationNumber: "REV-2026-0042",
-      clientName: "Rajesh Singhania",
-      companyName: "Supreme Builders Ltd",
-      clientEmail: "singhania.r@supremebuilders.in",
-      clientPhone: "+91 98765 43210",
-      clientAddress: "Plot 12, Tech Zone, Greater Noida, UP",
-      clientGstin: "09AAACS1234F1Z1",
-      items: [
-        { id: "i1", description: "WhatsApp Business API Auto-Brochure Bot Setup", quantity: 1, unitPrice: 25000, total: 25000 },
-        { id: "i2", description: "Meta Lead Form Instant Sync & Auto-Qualifier", quantity: 1, unitPrice: 15000, total: 15000 }
-      ],
-      subtotal: 40000,
-      discountAmount: 5000,
-      taxableAmount: 35000,
-      gstRate: 18,
-      cgstAmount: 3150,
-      sgstAmount: 3150,
-      igstAmount: 0,
-      isInterstate: false,
-      grandTotal: 41300,
-      paymentTerms: "50% advance upon PO, 50% upon deployment.",
-      status: "approved",
-      validUntil: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0],
-      createdAt: new Date().toISOString()
-    }
-  ],
-  leads: [
-    {
-      id: "l_demo1",
-      name: "Rajesh Singhania",
-      email: "singhania.r@supremebuilders.in",
-      phone: "+91 98765 43210",
-      companyName: "Supreme Builders",
-      industry: "builders",
-      stage: "site_visit_scheduled",
-      source: "Chanakya Chatbot",
-      createdAt: new Date().toISOString(),
-      score: 85
-    },
-    {
-      id: "l_demo2",
-      name: "Priya Sharma",
-      email: "priya@apexestates.co",
-      phone: "+91 99112 23344",
-      companyName: "Apex Estates",
-      industry: "real-estate",
-      stage: "new",
-      source: "Growth System Builder",
-      createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      score: 75
-    }
-  ],
-  assessments: [
-    {
-      id: "a_demo1",
-      contactName: "Priya Sharma",
-      email: "priya@apexestates.co",
-      phone: "+91 99112 23344",
-      companyName: "Apex Estates",
-      industry: "real-estate",
-      marketCountry: "India",
-      locationsCount: 3,
-      monthlyEnquiries: "100-500",
-      leadSources: ["Meta Ads", "Property Portals"],
-      servicesNeeded: ["Creative Production", "AI Automation", "CRM Setup"],
-      biggestProblem: "Delayed lead response and manual listing matching",
-      trackingMethod: "Google Sheets",
-      responseSpeed: "Within 2-4 hours",
-      followUpConsistency: "Inconsistent, done manually",
-      desiredOutcomes: ["Instant auto-response", "Viewing booking links"],
-      existingTools: ["Excel", "WhatsApp Web"],
-      teamSize: 12,
-      urgency: "Immediate (Next 14 days)",
-      budgetRange: "₹50,000 - ₹1,50,000",
-      createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      scores: {
-        creative: 40,
-        marketing: 50,
-        leadCapture: 30,
-        salesProcess: 25,
-        automation: 15,
-        leakRisk: 85,
-        complexity: 60
-      },
-      recommendedPackage: "arjuna"
-    }
-  ],
-  conversations: [
-    {
-      id: "c_demo1",
-      visitorName: "Rajesh Singhania",
-      visitorEmail: "singhania.r@supremebuilders.in",
-      visitorPhone: "+91 98765 43210",
-      industry: "builders",
-      messages: [
-        { id: "1", sender: "chanakya", text: "Namaste, I’m Chanakya—RevAstra’s AI RevOps consultant. What are you trying to improve: lead generation, content, follow-up, appointments, sales visibility or automation?", timestamp: new Date(Date.now() - 600000).toISOString() },
-        { id: "2", sender: "user", text: "We are a builder in Noida. We get many leads on Meta but our team takes hours to share the brochure and leads complain.", timestamp: new Date(Date.now() - 500000).toISOString() },
-        { id: "3", sender: "chanakya", text: "I understand. For Noida builders, speed is money. When brochure sharing is delayed, buyers buy elsewhere. What is your average response time, and how do you distribute brochures currently?", timestamp: new Date(Date.now() - 400000).toISOString() },
-        { id: "4", sender: "user", text: "It takes 2 to 3 hours because agents do it manually via WhatsApp.", timestamp: new Date(Date.now() - 300000).toISOString() },
-        { id: "5", sender: "chanakya", text: "A delay of 2-3 hours decreases booking conversions by up to 80%. If we implement our instant automated WhatsApp brochure delivery system, you can respond in 5 seconds. Rajesh, let's schedule a strategy call to deploy this.", timestamp: new Date(Date.now() - 200000).toISOString() }
-      ],
-      lastActive: new Date().toISOString(),
-      score: 85,
-      isEscalated: true,
-      notes: "High intent builder. Complains of manual brochure delays."
-    }
-  ],
-  projects: [
-    {
-      id: "p_demo1",
-      clientName: "Supreme Builders",
-      projectName: "The Sovereign Crest",
-      industry: "builders",
-      status: "production",
-      creativeProgress: 60,
-      marketingProgress: 30,
-      automationProgress: 10,
-      deliverables: [
-        { name: "Drone Video Shoot & Aerial Footage", type: "video", status: "ready_for_review", url: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80" },
-        { name: "3 BHK Concept Reel edits", type: "video", status: "approved" },
-        { name: "Project Lead Capture Landing Page", type: "landing_page", status: "in_progress" },
-        { name: "WhatsApp Brochure Bot Setup", type: "agent", status: "pending" }
-      ],
-      createdAt: new Date().toISOString()
-    }
-  ],
-  quotes: [
-    {
-      id: "q_demo1",
-      name: "Rajesh Singhania",
-      email: "singhania.r@supremebuilders.in",
-      phone: "+91 98765 43210",
-      company: "Supreme Builders",
-      selectedPackage: "arjuna",
-      status: "pending",
-      createdAt: new Date().toISOString()
-    }
-  ],
-  voiceSettings: {
-    voiceName: "Zephyr",
-    sessionLimitSeconds: 180,
-    costLimitDollars: 0.20,
-    systemInstruction: "You are Chanakya, RevAstra’s AI RevOps consultant. Speak like an experienced Indian business consultant having a relaxed one-to-one conversation. Be warm, composed, concise and practical. Use short sentences and natural pauses. Avoid sounding scripted, theatrical, overexcited or robotic. Ask one useful question at a time."
-  }
-};
-
-// Ensure db directory and file exist
-function initDB() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(DB_FILE)) {
-    const EXAMPLE_FILE = path.join(DATA_DIR, "db.example.json");
-    if (fs.existsSync(EXAMPLE_FILE)) {
-      fs.copyFileSync(EXAMPLE_FILE, DB_FILE);
-    } else {
-      fs.writeFileSync(DB_FILE, JSON.stringify(DEFAULT_STATE, null, 2));
-    }
-  }
-}
-
-
-function readDB(): DBState {
-  initDB();
-  try {
-    const data = fs.readFileSync(DB_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch (err) {
-    console.error("Error reading database file, resetting to default state", err);
-    return DEFAULT_STATE;
-  }
-}
-
-function writeDB(state: DBState) {
-  initDB();
-  fs.writeFileSync(DB_FILE, JSON.stringify(state, null, 2));
-}
-
-// Initialize database
+// Initialize database on startup
 initDB();
 
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
-// Initialize Gemini client on server-side dynamically on demand
+// ---------------------------------------------------------------------------
+// Mount extracted route modules
+// ---------------------------------------------------------------------------
+app.use("/api/health", healthRouter);
+app.use("/api/db/leads", leadsRouter);
+app.use("/api/crm/tasks", tasksRouter);
+app.use("/api/crm/quotations", quotationsRouter);
+app.use("/api/crm/activities", activitiesRouter);
+
+// ---------------------------------------------------------------------------
+// Gemini AI client (lazy initialization)
+// ---------------------------------------------------------------------------
 let aiInstance: any = null;
 let ai: any = null;
 
 async function getGeminiClient() {
   if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = config.gemini.apiKey;
     if (!apiKey) {
-      console.warn("GEMINI_API_KEY is not defined in the environment. Falling back to deterministic responses.");
+      console.warn("[Gemini] GEMINI_API_KEY is not configured. Falling back to deterministic responses.");
       return null;
     }
     try {
-      console.log("Dynamically loading @google/genai SDK on user request...");
+      console.log("[Gemini] Initializing SDK on first request...");
       const { GoogleGenAI } = await import("@google/genai");
       aiInstance = new GoogleGenAI({
-        apiKey: apiKey,
+        apiKey,
         httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
+          headers: { "User-Agent": "revastra-server" },
+        },
       });
       ai = aiInstance;
-      console.log("Gemini API Client dynamically initialized successfully.");
+      console.log("[Gemini] Client initialized successfully.");
     } catch (e) {
-      console.warn("Failed to dynamically initialize Gemini Client: ", e);
+      console.warn("[Gemini] Failed to initialize client:", e);
     }
   }
   return aiInstance;
 }
 
-
-// REST DATABASE ENDPOINTS
 
 // AUTHENTICATION ENDPOINTS
 app.post("/api/auth/register", (req, res) => {
@@ -964,16 +757,16 @@ app.post("/api/chanakya/chat", async (req, res) => {
   if (activeAi) {
     try {
       // 10. Use configured efficient Flash model for normal text conversation
-      let modelName = process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash";
-      const config: any = {};
+      let modelName = config.gemini.textModel;
+      const configObj: any = {};
 
       if (useThinking) {
-        modelName = "gemini-2.5-pro"; // capability model
-        config.thinkingConfig = {
+        modelName = config.gemini.thinkingModel; // capability model
+        configObj.thinkingConfig = {
           thinkingLevel: "HIGH"
         };
       } else if (speed === "fast") {
-        modelName = "gemini-2.5-flash";
+        modelName = config.gemini.textModel;
       }
 
       // Configure Grounding Tools
@@ -999,7 +792,7 @@ app.post("/api/chanakya/chat", async (req, res) => {
       const response = await activeAi.models.generateContent({
         model: modelName,
         contents: systemPrompt,
-        config: config
+        config: configObj
       });
 
       const responseText = response.text || "I am reflecting on your growth requirements. Could you tell me more about your current response times for incoming leads?";
@@ -1150,10 +943,10 @@ app.post("/api/chanakya/audit", async (req, res) => {
 
   let responseData;
 
-  if (ai) {
+  if (activeAi) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await activeAi.models.generateContent({
+        model: config.gemini.assessmentModel,
         contents: auditSystemPrompt,
       });
 
@@ -1237,7 +1030,7 @@ app.post("/api/chanakya/audit", async (req, res) => {
 // CHANAKYA STRUCTURED CONSULTATION REPORT ENDPOINTS
 
 app.post("/api/chanakya/report", async (req, res) => {
-  await getGeminiClient();
+  const activeAi = await getGeminiClient();
   const { 
     companyName,
     contactName,
@@ -1352,7 +1145,7 @@ app.post("/api/chanakya/report", async (req, res) => {
     nextStep: z.string().min(10)
   });
 
-  if (ai) {
+  if (activeAi) {
     try {
       const prompt = `
         Act as Chanakya, RevAstra's chief RevOps Strategist.
@@ -1395,8 +1188,8 @@ app.post("/api/chanakya/report", async (req, res) => {
         }
       `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await activeAi.models.generateContent({
+        model: config.gemini.assessmentModel,
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -1512,6 +1305,7 @@ async function startServer() {
   server.on("upgrade", (request, socket, head) => {
     const pathname = new URL(request.url || "", `http://${request.headers.host}`).pathname;
     if (pathname === "/api/chanakya/live") {
+      console.log("[WS] Upgrade request received for /api/chanakya/live");
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit("connection", ws, request);
       });
@@ -1519,20 +1313,19 @@ async function startServer() {
   });
 
   wss.on("connection", async (ws) => {
+    console.log("[WS] Client accepted on /api/chanakya/live");
     await getGeminiClient();
-    console.log("New Chanakya Live Audio Client connected.");
     let session: any = null;
     let timer: NodeJS.Timeout | null = null;
-    let startTimestamp = Date.now();
-    
+
     // Costs trackers
     let totalInputSeconds = 0;
     let totalOutputSeconds = 0;
-    
+
     ws.on("message", async (message) => {
       try {
         const payload = JSON.parse(message.toString());
-        
+
         if (payload.type === "start") {
           const db = readDB() as any;
           const settings = db.voiceSettings || {
@@ -1541,14 +1334,15 @@ async function startServer() {
             costLimitDollars: 0.20,
             systemInstruction: "You are Chanakya, RevAstra’s AI RevOps consultant. Speak like an experienced Indian business consultant having a relaxed one-to-one conversation. Be warm, composed, concise and practical. Use short sentences and natural pauses. Avoid sounding scripted, theatrical, overexcited or robotic. Ask one useful question at a time."
           };
-          
+
           const voiceName = payload.config?.voiceName || settings.voiceName;
           const sessionLimit = payload.config?.sessionLimitSeconds || settings.sessionLimitSeconds;
           const costLimit = payload.config?.costLimitDollars || settings.costLimitDollars;
-          
-          console.log(`Starting Chanakya Live session with Voice: ${voiceName}, Limit: ${sessionLimit}s, Cost limit: $${costLimit}`);
-          
-          if (!process.env.GEMINI_API_KEY || !ai) {
+
+          console.log(`[Gemini Live] Starting session. Voice: ${voiceName}, Model: ${config.gemini.liveModel}, Limit: ${sessionLimit}s, Cost limit: $${costLimit}`);
+
+          if (!config.gemini.apiKey || !ai) {
+            console.warn("[Gemini Live] Configuration unavailable — sending text fallback to client");
             ws.send(JSON.stringify({
               type: "error",
               text: "Voice is temporarily unavailable. I’ve kept the conversation open in text mode."
@@ -1556,11 +1350,12 @@ async function startServer() {
             ws.close();
             return;
           }
-          
+
           // Initialize Gemini Live connect
           try {
+            console.log(`[Gemini Live] Connecting to model: ${config.gemini.liveModel}...`);
             session = await (ai as any).live.connect({
-              model: "gemini-3.1-flash-live-preview",
+              model: config.gemini.liveModel,
               config: {
                 responseModalities: ["AUDIO"],
                 speechConfig: {
@@ -1572,27 +1367,19 @@ async function startServer() {
               },
               callbacks: {
                 onmessage: (msg: any) => {
-                  // Handle model audio output
                   const audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
                   if (audio) {
-                    // Track output audio seconds to calculate cost
-                    // 24kHz 16-bit mono PCM is 48000 bytes per second.
                     const rawLength = (audio.length * 3) / 4;
                     const seconds = rawLength / 48000;
                     totalOutputSeconds += seconds;
-                    
                     ws.send(JSON.stringify({ type: "audio", audio }));
-                    
-                    // Check cost limit
                     checkLimits();
                   }
-                  
-                  // Handle interruption
+
                   if (msg.serverContent?.interrupted) {
                     ws.send(JSON.stringify({ type: "interrupted" }));
                   }
-                  
-                  // Handle model output transcription
+
                   const modelParts = msg.serverContent?.modelTurn?.parts;
                   if (modelParts) {
                     const modelText = modelParts.find((p: any) => p.text)?.text;
@@ -1605,10 +1392,9 @@ async function startServer() {
                       }));
                     }
                   }
-                  
-                  // Handle user input transcription
-                  const userTranscript = msg.serverContent?.inputAudioTranscription?.text || 
-                                         (msg.serverContent?.inputAudioTranscription?.parts && 
+
+                  const userTranscript = msg.serverContent?.inputAudioTranscription?.text ||
+                                         (msg.serverContent?.inputAudioTranscription?.parts &&
                                           msg.serverContent.inputAudioTranscription.parts.find((p: any) => p.text)?.text);
                   if (userTranscript) {
                     ws.send(JSON.stringify({
@@ -1620,28 +1406,27 @@ async function startServer() {
                   }
                 },
                 onclose: () => {
-                  console.log("Gemini Live session closed.");
+                  console.log("[Gemini Live] Session closed.");
                   ws.send(JSON.stringify({ type: "status", text: "Session closed by Gemini." }));
                 },
                 onerror: (err: any) => {
-                  console.error("Gemini Live error:", err);
+                  console.error("[Gemini Live] Session error:", err?.message || err);
                   ws.send(JSON.stringify({ type: "error", text: "Gemini session error occurred." }));
                 }
               }
             });
-            
+
+            console.log("[Gemini Live] Connection success");
             ws.send(JSON.stringify({ type: "status", text: "Connected to Chanakya Voice Service" }));
-            startTimestamp = Date.now();
-            
-            // Start session duration timer
+
             timer = setTimeout(() => {
-              console.log(`Session duration limit (${sessionLimit}s) reached.`);
+              console.log(`[Gemini Live] Session limit (${sessionLimit}s) reached`);
               ws.send(JSON.stringify({ type: "limit", reason: "session" }));
               cleanup();
             }, sessionLimit * 1000);
-            
-          } catch (connectErr) {
-            console.error("Failed to connect to Gemini Live:", connectErr);
+
+          } catch (connectErr: any) {
+            console.error("[Gemini Live] Connection failure:", connectErr?.message || connectErr);
             ws.send(JSON.stringify({
               type: "error",
               text: "Voice is temporarily unavailable. I’ve kept the conversation open in text mode."
@@ -1649,48 +1434,45 @@ async function startServer() {
             ws.close();
           }
         }
-        
+
         else if (payload.type === "audio") {
           if (session && payload.audio) {
-            // Track input audio seconds to calculate cost
-            // Input is 16kHz 16-bit mono PCM, which is 32000 bytes per second.
             const rawLength = (payload.audio.length * 3) / 4;
             const seconds = rawLength / 32000;
             totalInputSeconds += seconds;
-            
+
             session.sendRealtimeInput({
               audio: { data: payload.audio, mimeType: "audio/pcm;rate=16000" }
             });
-            
-            // Check cost limit
+
             checkLimits();
           }
         }
-        
+
         else if (payload.type === "end") {
           cleanup();
         }
-        
+
       } catch (err) {
-        console.error("WS message error:", err);
+        console.error("[WS] Message error:", err);
       }
     });
-    
+
     function checkLimits() {
-      const inputCost = totalInputSeconds * 0.0001; 
-      const outputCost = totalOutputSeconds * 0.0003; 
+      const inputCost = totalInputSeconds * 0.0001;
+      const outputCost = totalOutputSeconds * 0.0003;
       const totalCost = inputCost + outputCost;
-      
+
       const db = readDB() as any;
       const costLimit = db.voiceSettings?.costLimitDollars || 0.20;
-      
+
       if (totalCost >= costLimit) {
-        console.log(`Session cost limit ($${costLimit}) exceeded. Estimated cost: $${totalCost.toFixed(4)}`);
+        console.log(`[Gemini Live] Cost limit ($${costLimit}) reached. Estimated: $${totalCost.toFixed(4)}`);
         ws.send(JSON.stringify({ type: "limit", reason: "cost" }));
         cleanup();
       }
     }
-    
+
     function cleanup() {
       if (timer) {
         clearTimeout(timer);
@@ -1706,16 +1488,17 @@ async function startServer() {
         ws.close();
       } catch (e) {}
     }
-    
+
     ws.on("close", () => {
-      console.log("Client disconnected from Chanakya Live.");
+      console.log("[WS] Client disconnected from Chanakya Live");
       cleanup();
     });
   });
 
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`RevAstra Server is running successfully on http://0.0.0.0:${PORT}`);
+    console.log(`[Server] RevAstra Server running at http://0.0.0.0:${PORT} (${config.nodeEnv})`);
   });
 }
 
 startServer();
+
